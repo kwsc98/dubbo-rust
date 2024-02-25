@@ -79,6 +79,8 @@ impl<T> Request<T> {
     }
 }
 
+
+#[derive(Debug)]
 pub struct Response<T> {
     message: T,
     metadata: Metadata,
@@ -196,7 +198,7 @@ pub trait Invocation {
     fn get_method_name(&self) -> String;
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct RpcInvocation {
     target_service_unique_name: String,
     method_name: String,
