@@ -105,7 +105,8 @@ impl Dubbo {
                     .protocols
                     .get_protocol_or_default(service_config.protocol.as_str());
                 let protocol_url =
-                    format!("{}/{}", protocol.to_url(), service_config.interface.clone(),);
+                    format!("{}/{}?{}", protocol.to_url(), service_config.interface.clone(),"prefer.serialization=fastjson");
+
                 tracing::info!("protocol_url: {:?}", protocol_url);
                 Url::from_url(&protocol_url)
             } else {

@@ -30,7 +30,7 @@ impl DemoService for DemoServiceImpl {
 #[tokio::main(worker_threads = 512)]
 async fn main() {
     dubbo_logger::init();
-    env::set_var("DUBBO_CONFIG_PATH", "examples/interface/application.yaml");
+    env::set_var("DUBBO_CONFIG_PATH", "/Users/kwsc98/Desktop/mySpace/dubbo-rust/examples/interface/application.yaml");
     let r = RootConfig::new();
     let r = match r.load() {
         Ok(config) => config,

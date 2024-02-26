@@ -60,10 +60,10 @@ pub fn rpc_trait(attr: TokenStream, item: TokenStream) -> TokenStream {
                         req_vec.push(res_str.unwrap());
                     )*
                     let _version : Option<&str> = #version;
-                    let request = Request::new(req_vec);
-                    let codec = SerdeCodec::<
-                        Vec<String>,
-                        #output_type,
+                    let request = Request::new(TripleRequestWrapper::new(req_vec));
+                    let codec = ProstCodec::<
+                     TripleRequestWrapper,
+                     TripleResponseWrapper
                     >::default();
                     let service_unique = #package.to_owned() + "." + stringify!(#trait_ident);
                     let method_name = stringify!(#ident).to_string();
@@ -76,7 +76,11 @@ pub fn rpc_trait(attr: TokenStream, item: TokenStream) -> TokenStream {
                     ).unwrap();
                     let res = self.inner.unary(request, codec, path, invocation).await;
                     match res {
-                        Ok(res) => Ok(res.into_parts().1),
+                        Ok(res) => {
+                            let response_wrapper = res.into_parts().1;
+                            let res: #output_type = serde_json::from_slice(&response_wrapper.data).unwrap();
+                             Ok(res)
+                        },
                         Err(err) => Err(err)
                     }
                 }
@@ -86,7 +90,9 @@ pub fn rpc_trait(attr: TokenStream, item: TokenStream) -> TokenStream {
     let rpc_client = syn::Ident::new(&format!("{}Rpc", trait_ident), trait_ident.span());
     let expanded = quote! {
         use dubbo::triple::client::TripleClient;
-        use dubbo::triple::codec::serde_codec::SerdeCodec;
+        use dubbo::triple::triple_wrapper::TripleRequestWrapper;
+        use dubbo::triple::triple_wrapper::TripleResponseWrapper;
+        use dubbo::triple::codec::prost::ProstCodec;
         use dubbo::invocation::Request;
         use dubbo::invocation::Response;
         use dubbo::triple::client::builder::ClientBuilder;

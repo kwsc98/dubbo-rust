@@ -2,19 +2,23 @@ use std::{
     sync::Arc,
     task::{Context, Poll},
 };
+use bytes::Buf;
 
 use crate::{
     codegen::{Request, Response, UnarySvc},
     status::Status,
     BoxBody, BoxFuture, StdError,
 };
-use crate::{status::Code, triple::codec::triple::TripleWrapperCodec};
+use crate::{status::Code};
 use http_body::Body;
 use tower::Service;
+use crate::codegen::ProstCodec;
+use crate::param::Param;
+use crate::triple::triple_wrapper::{TripleRequestWrapper, TripleResponseWrapper};
 
 use super::TripleServer;
 
-pub type RpcFuture<T> = std::pin::Pin<Box<dyn std::future::Future<Output = T> + Send>>;
+pub type RpcFuture<T> = std::pin::Pin<Box<dyn std::future::Future<Output=T> + Send>>;
 
 pub struct RpcMsg {
     pub version: Option<String>,
@@ -29,8 +33,8 @@ impl RpcMsg {
         let attr: Vec<&str> = path.split("/").collect();
         RpcMsg {
             version,
-            class_name: attr[0].to_string(),
-            method_name: attr[1].to_string(),
+            class_name: attr[1].to_string(),
+            method_name: attr[2].to_string(),
             req: vec![],
             res: Err(Status::new(Code::Ok, "success".to_string())),
         }
@@ -58,10 +62,10 @@ impl<T: RpcServer> RpcHttp2Server<T> {
 }
 
 impl<T, B> Service<http::Request<B>> for RpcHttp2Server<T>
-where
-    T: RpcServer + 'static,
-    B: Body + Send + 'static,
-    B::Error: Into<StdError> + Send + 'static,
+    where
+        T: RpcServer + 'static,
+        B: Body + Send + 'static,
+        B::Error: Into<StdError> + Send + 'static,
 {
     type Response = http::Response<BoxBody>;
     type Error = std::convert::Infallible;
@@ -70,7 +74,7 @@ where
         Poll::Ready(Ok(()))
     }
     fn call(&mut self, req: http::Request<B>) -> Self::Future {
-        let path = req.uri().to_string();
+        let path = req.uri().path().to_string();
         let version = req
             .headers()
             .get("tri-service-version")
@@ -80,7 +84,10 @@ where
             inner: self.inner.clone(),
             msg: Some(rpc_msg),
         };
-        let mut server = TripleServer::new(TripleWrapperCodec::default());
+        let mut server = TripleServer::new(ProstCodec::<
+            TripleResponseWrapper,
+            TripleRequestWrapper
+        >::default());
         let fut = async move {
             let res = server.unary(rpc_unary_server, req).await;
             Ok(res)
@@ -94,14 +101,21 @@ struct RpcUnaryServer<T: RpcServer + 'static> {
     inner: _Inner<T>,
     msg: Option<RpcMsg>,
 }
-impl<T: RpcServer> UnarySvc<Vec<String>> for RpcUnaryServer<T> {
-    type Response = Result<String, crate::status::Status>;
+
+impl<T: RpcServer> UnarySvc<TripleRequestWrapper> for RpcUnaryServer<T> {
+    type Response = TripleResponseWrapper;
     type Future = BoxFuture<Response<Self::Response>, crate::status::Status>;
-    fn call(&mut self, request: Request<Vec<String>>) -> Self::Future {
+    fn call(&mut self, request: Request<TripleRequestWrapper>) -> Self::Future {
         let inner = self.inner.0.clone();
         let mut msg = self.msg.take().unwrap();
-        msg.req = request.message;
-        let fut = async move { Ok(Response::new(inner.invoke(msg).await.res)) };
+        msg.req = request.message.get_req();
+        let fut = async move {
+            let res = inner.invoke(msg).await.res;
+            match res {
+                Ok(res) => Ok(Response::new(TripleResponseWrapper::new(res))),
+                Err(err) => Err(err)
+            }
+        };
         Box::pin(fut)
     }
 }
@@ -112,11 +126,13 @@ impl<T: RpcServer> Clone for RpcHttp2Server<T> {
         Self { inner }
     }
 }
+
 impl<T: RpcServer> Clone for _Inner<T> {
     fn clone(&self) -> Self {
         Self(self.0.clone())
     }
 }
+
 impl<T: std::fmt::Debug> std::fmt::Debug for _Inner<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self.0)

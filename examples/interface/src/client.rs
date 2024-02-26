@@ -5,6 +5,7 @@ use registry_zookeeper::ZookeeperRegistry;
 
 #[tokio::main(worker_threads = 512)]
 async fn main() {
+    dubbo_logger::init();
     let builder = ClientBuilder::new()
     .with_registry(ArcRegistry::new(ZookeeperRegistry::new("127.0.0.1:2181")));
     let mut client = DemoServiceRpc::new(builder);
