@@ -1,9 +1,26 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
 use std::collections::HashMap;
-use syn::{self, parse_macro_input, FnArg, ImplItem, ItemImpl, ItemTrait, ReturnType, TraitItem, Token};
-use syn::token::Mut;
-
+use syn::{
+    self, parse_macro_input, FnArg, ImplItem, ItemImpl, ItemTrait, ReturnType, Token, TraitItem,
+};
 
 #[proc_macro_attribute]
 pub fn rpc_trait(attr: TokenStream, item: TokenStream) -> TokenStream {
@@ -41,7 +58,7 @@ pub fn rpc_trait(attr: TokenStream, item: TokenStream) -> TokenStream {
             let mut token = e.to_token_stream();
             if vec.is_empty() {
                 if let FnArg::Receiver(_r) = e {
-                    token = quote!(&mut self,);
+                    token = quote!(&mut self);
                 }
             }
             vec.push(token);
@@ -50,7 +67,7 @@ pub fn rpc_trait(attr: TokenStream, item: TokenStream) -> TokenStream {
         fn_quote.push(
             quote! {
                     #[allow(non_snake_case)]
-                    pub #asyncable fn #ident (#(#inputs)*) -> Result<#output_type,dubbo::status::Status> {
+                    pub #asyncable fn #ident (#(#inputs),*) -> Result<#output_type,dubbo::status::Status> {
                     let mut req_vec : Vec<String> = vec![];
                     #(
                         let mut res_str = serde_json::to_string(&#req);
@@ -138,12 +155,12 @@ pub fn rpc_server(attr: TokenStream, item: TokenStream) -> TokenStream {
                     let req = &input.pat;
                     let req_type = &input.ty;
                     let token = quote! {
-                     let result : Result<#req_type,_>  = serde_json::from_slice(req[idx].as_bytes());
+                     let result : Result<#req_type,_>  = serde_json::from_slice(param_req[idx].as_bytes());
                     if let Err(err) = result {
                         param.res = Err(dubbo::status::Status::new(dubbo::status::Code::InvalidArgument,err.to_string()));
                         return param;
                     }
-                    let #req : #req_type = serde_json::from_slice(req[idx].as_bytes()).unwrap();
+                    let #req : #req_type = result.unwrap();
                     idx += 1;
                     };
                     req_pat.push(req);
@@ -154,7 +171,7 @@ pub fn rpc_server(attr: TokenStream, item: TokenStream) -> TokenStream {
             );
             vec.push(quote! {
                 if &param.method_name[..] == stringify!(#method) {
-                let req = &param.req;
+                let param_req = &param.req;
                 let mut idx = 0;
                 #(
                     #req
@@ -252,7 +269,6 @@ fn get_server_item(item: ItemImpl) -> proc_macro2::TokenStream {
     }
 }
 
-
 fn get_item_trait(item: ItemTrait) -> proc_macro2::TokenStream {
     let trait_ident = &item.ident;
     let item_fn = item.items.iter().fold(vec![], |mut vec, e| {
@@ -271,8 +287,7 @@ fn get_item_trait(item: ItemTrait) -> proc_macro2::TokenStream {
             ));
         }
         vec
-    },
-    );
+    });
     quote! {
         pub trait #trait_ident {
            #(

@@ -30,11 +30,7 @@ pub struct ResDto {
 
 #[rpc_trait(package = "org.apache.dubbo.springboot.demo")]
 pub trait DemoService {
-
     async fn sayHello(&self, name: String) -> String;
 
-    async fn sayHelloV2(&self, name: ReqDto) -> ResDto;
-
+    async fn sayHelloV2(&self, name: ReqDto, name2: ReqDto) -> ResDto;
 }
-
-

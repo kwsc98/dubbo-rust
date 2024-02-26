@@ -1,24 +1,41 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+use bytes::Buf;
 use std::{
     sync::Arc,
     task::{Context, Poll},
 };
-use bytes::Buf;
 
+use crate::codegen::ProstCodec;
+use crate::param::Param;
+use crate::status::Code;
+use crate::triple::triple_wrapper::{TripleRequestWrapper, TripleResponseWrapper};
 use crate::{
     codegen::{Request, Response, UnarySvc},
     status::Status,
     BoxBody, BoxFuture, StdError,
 };
-use crate::{status::Code};
 use http_body::Body;
 use tower::Service;
-use crate::codegen::ProstCodec;
-use crate::param::Param;
-use crate::triple::triple_wrapper::{TripleRequestWrapper, TripleResponseWrapper};
 
 use super::TripleServer;
 
-pub type RpcFuture<T> = std::pin::Pin<Box<dyn std::future::Future<Output=T> + Send>>;
+pub type RpcFuture<T> = std::pin::Pin<Box<dyn std::future::Future<Output = T> + Send>>;
 
 pub struct RpcMsg {
     pub version: Option<String>,
@@ -62,10 +79,10 @@ impl<T: RpcServer> RpcHttp2Server<T> {
 }
 
 impl<T, B> Service<http::Request<B>> for RpcHttp2Server<T>
-    where
-        T: RpcServer + 'static,
-        B: Body + Send + 'static,
-        B::Error: Into<StdError> + Send + 'static,
+where
+    T: RpcServer + 'static,
+    B: Body + Send + 'static,
+    B::Error: Into<StdError> + Send + 'static,
 {
     type Response = http::Response<BoxBody>;
     type Error = std::convert::Infallible;
@@ -84,10 +101,8 @@ impl<T, B> Service<http::Request<B>> for RpcHttp2Server<T>
             inner: self.inner.clone(),
             msg: Some(rpc_msg),
         };
-        let mut server = TripleServer::new(ProstCodec::<
-            TripleResponseWrapper,
-            TripleRequestWrapper
-        >::default());
+        let mut server =
+            TripleServer::new(ProstCodec::<TripleResponseWrapper, TripleRequestWrapper>::default());
         let fut = async move {
             let res = server.unary(rpc_unary_server, req).await;
             Ok(res)
@@ -113,7 +128,7 @@ impl<T: RpcServer> UnarySvc<TripleRequestWrapper> for RpcUnaryServer<T> {
             let res = inner.invoke(msg).await.res;
             match res {
                 Ok(res) => Ok(Response::new(TripleResponseWrapper::new(res))),
-                Err(err) => Err(err)
+                Err(err) => Err(err),
             }
         };
         Box::pin(fut)

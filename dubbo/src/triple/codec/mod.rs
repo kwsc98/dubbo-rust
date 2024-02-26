@@ -18,8 +18,6 @@
 pub mod buffer;
 pub mod prost;
 pub mod serde_codec;
-pub mod triple;
-
 
 use std::io;
 

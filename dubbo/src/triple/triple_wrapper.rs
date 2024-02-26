@@ -1,4 +1,20 @@
-use bytes::BufMut;
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 use prost::Message;
 
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -38,19 +54,12 @@ pub struct TripleExceptionWrapper {
     pub data: ::prost::alloc::vec::Vec<u8>,
 }
 
-
 impl TripleRequestWrapper {
-    pub fn new(strs: Vec<String>) -> Self {
+    pub fn new(data: Vec<String>) -> Self {
         let mut trip = TripleRequestWrapper::default();
         trip.serialize_type = "fastjson".to_string();
-        trip.args = strs.iter().map(|e| e.as_bytes().to_vec()).collect();
+        trip.args = data.iter().map(|e| e.as_bytes().to_vec()).collect();
         return trip;
-    }
-    pub fn get_buf(strs: Vec<String>) -> Vec<u8> {
-        let mut trip = TripleRequestWrapper::default();
-        trip.serialize_type = "fastjson".to_string();
-        trip.args = strs.iter().map(|e| e.as_bytes().to_vec()).collect();
-        return trip.encode_to_vec();
     }
     pub fn get_req(self) -> Vec<String> {
         let mut res = vec![];
@@ -62,31 +71,10 @@ impl TripleRequestWrapper {
 }
 
 impl TripleResponseWrapper {
-    pub fn new(strs: String) -> TripleResponseWrapper {
+    pub fn new(data: String) -> TripleResponseWrapper {
         let mut trip = TripleResponseWrapper::default();
         trip.serialize_type = "fastjson".to_string();
-        trip.data = strs.as_bytes().to_vec();
+        trip.data = data.as_bytes().to_vec();
         return trip;
-    }
-    pub fn get_buf(strs: String) -> Vec<u8> {
-        let mut trip = TripleResponseWrapper::default();
-        trip.serialize_type = "fastjson".to_string();
-        trip.data = strs.as_bytes().to_vec();
-        return trip.encode_to_vec();
-    }
-    pub fn is_empty_body(&self) -> bool {
-        return self.data.starts_with("null".as_bytes());
-    }
-}
-
-impl TripleExceptionWrapper {
-    pub fn get_buf(strs: String) -> Vec<u8> {
-        let mut trip = TripleExceptionWrapper::default();
-        trip.serialization = "fastjson".to_string();
-        trip.data = strs.as_bytes().to_vec();
-        return trip.encode_to_vec();
-    }
-    pub fn get_err_info(&self) -> String {
-        return serde_json::from_slice(&self.data[..]).unwrap_or("rpc error".to_owned());
     }
 }
