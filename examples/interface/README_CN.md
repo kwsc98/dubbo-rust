@@ -1,4 +1,4 @@
-# Apache Dubbo-rust 示例 - greeter
+# Apache Dubbo-rust 示例 - interface
 
 ## 构建并运行
 
