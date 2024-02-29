@@ -171,7 +171,10 @@ impl Metadata {
         let mut h: HashMap<String, String> = HashMap::new();
         for (k, v) in headers.into_iter() {
             if let Some(name) = k {
-                h.insert(name.to_string(), v.to_str().unwrap().to_string());
+                h.insert(
+                    name.to_string(),
+                    String::from_utf8_lossy(v.as_bytes()).to_string(),
+                );
             }
         }
 
@@ -188,6 +191,10 @@ impl Metadata {
         }
 
         header
+    }
+
+    pub fn get(&self, key: &str) -> Option<&String> {
+        self.inner.get(key)
     }
 }
 

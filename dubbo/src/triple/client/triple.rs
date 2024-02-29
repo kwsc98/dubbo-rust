@@ -171,7 +171,7 @@ impl TripleClient {
                 let message = match body.try_next().await? {
                     Some(message) => message,
                     None => {
-                        let header = parts.into_headers();
+                        let header = parts;
                         let code = header
                             .get("grpc-status")
                             .map(|e| crate::status::Code::from(e.as_bytes()))
@@ -179,9 +179,9 @@ impl TripleClient {
 
                         let message = header
                             .get("grpc-message")
-                            .map(|e| e.to_str().unwrap())
-                            .map_or("Missing response message.", |e| e);
-                        return Err(crate::status::Status::new(code, message.to_owned()));
+                            .map(|e| e.to_string())
+                            .map_or(code.to_string(), |e| e);
+                        return Err(crate::status::Status::new(code, message));
                     }
                 };
 
