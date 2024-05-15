@@ -23,7 +23,6 @@ pub struct ServiceConfig {
     pub group: String,
     pub protocol: String,
     pub interface: String,
-    pub serialization: Option<String>,
 }
 
 impl ServiceConfig {
@@ -41,11 +40,5 @@ impl ServiceConfig {
 
     pub fn protocol(self, protocol: String) -> Self {
         Self { protocol, ..self }
-    }
-    pub fn serialization(self, serialization: Option<String>) -> Self {
-        Self {
-            serialization,
-            ..self
-        }
     }
 }

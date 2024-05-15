@@ -23,4 +23,3 @@ pub mod decode;
 pub mod encode;
 pub mod server;
 pub mod transport;
-pub mod triple_wrapper;
